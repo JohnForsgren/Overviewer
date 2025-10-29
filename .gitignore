@@ -61,30 +61,10 @@ Thumbs.db
 # Node / front-end (if scanning mixed repos)
 node_modules/
 
-# Binary / assets (not source)
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.ico
-*.zip
-*.tar
-*.gz
-*.jar
-*.exe
-*.dll
-*.so
-*.pdf
-*.mp4
-*.mp3
-*.wav
-*.ttf
-*.otf
-*.woff
-*.woff2
+# (Intentionally not ignoring images/media/fonts so they can be versioned.)
 
-# Local cache / metadata produced by overviewer (if any added later)
-overviewer_cache.json
+# Local cache / metadata produced by overviewer (placeholder if added later)
+# overviewer_cache.json
 
 # Environment variables / secrets
 .env
