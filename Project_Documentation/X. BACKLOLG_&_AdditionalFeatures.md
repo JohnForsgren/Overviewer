@@ -1,13 +1,24 @@
 
 
-
-== Small additions ==
-- There should be in addition to "Deselectt all Types" a "Select all types" button. 
+# 
 
 
 
 
-== Ensuring Maximum quality of the output == 
+
+
+
+
+<<<<<<<<<<<<<<<<<< 
+
+# === ADDITIONALLY:: Implement the developer setting ===
+As mentioned in the Starting_Instructions, the Developer setting is intended to have info digestible for a developer. I don't have a clear idea yet on what might be included here. 
+ 
+
+
+
+
+# [Largely_Complete_but_Can_Be_sent_to_a_New_AI]== Ensuring Maximum quality of the output == 
 The important next step is to ensure that the OPTIMAL LOGIC is used for the RIGHT LANGUAGES. This concerns our PDF and SPA applications. 
 
 3 steps: 
@@ -55,11 +66,8 @@ Then ask for additional ideas of what can be done to provide more context
 
     === UPDATE REGARDING THE UAT TESTING === 
 
-    TODO NOW:  <<<<<<<<<<<<<<< CONTINUE HERE 
-    - Populate the UAT with example files and test. 
-    <<<< ONLY THE TYPSCRIPT REMAINS 
+    The update has been made and the initial GPT gave feedback. 
+    However, a NEW update with a new output file could definitily be made to improve the app further <<<<<<<< 
 
 
-=== ADDITIONALLY:: Implement the developer setting ===
-As mentioned in the Starting_Instructions, the Developer setting is intended to have info digestible for a developer. I don't have a clear idea yet on what might be included here. 
- 
+  
