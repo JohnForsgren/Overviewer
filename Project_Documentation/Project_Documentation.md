@@ -68,14 +68,14 @@ If a file exceeded size guard: 📕 Skipped: large file
 Supported enrichment extensions now include: `.py .ts .tsx .js .jsx .cs .java .sh .xsl .xml .dita .ditamap .scss .css`
 
 - Python (.py): AST for imports, functions, classes; exports via `__all__` or top-level defs; first docstring line.
-- TypeScript / JavaScript (.ts .tsx .js .jsx): Regex for imports, functions, classes, exported symbols; (doc extraction TBD).
+- TypeScript / JavaScript (.ts .tsx .js .jsx): Regex for imports, functions, classes; deduplicated exports (group/value); type/interface/enum exports annotated `(type)`; first JSDoc block first line captured as doc summary.
 - C# / Java (.cs .java): Regex imports, function-like signatures, classes, public identifiers; first block or line comment group as doc summary.
-- Shell (.sh): Shebang + sourced scripts treated as imports; function definitions via `name() {`; first non-shebang comment line as doc summary; star heuristic for filenames containing deploy/start/run.
-- XSL (.xsl): `<xsl:import|include>` as imports; named + match templates aggregated as functions; stylesheet tag snippet as doc summary.
-- XML (.xml): Root element + namespace declarations (treated as imports); distinct tag count summarized in doc line.
+- Shell (.sh): Shebang + sourced scripts as imports; functions via `name() {`; top contiguous comment block merged into doc summary; star heuristic for filenames containing deploy/start/run.
+- XSL (.xsl): `<xsl:import|include>` as imports; functions list now includes only named templates + `<xsl:function>`; match templates counted in doc summary (named_templates / match_templates / functions).
+- XML (.xml): Root element + deduplicated namespace declarations (imports); distinct tag count summarized in doc line.
 - DITA (.dita .ditamap): Root element; keyrefs (imports); href count; summary of root + keyref/href counts.
 - SCSS (.scss): `@use/@import` targets as imports; mixins as functions; counts for vars/mixins/selectors in doc summary.
-- CSS (.css): Count of selectors and media queries in doc summary.
+- CSS (.css): Counts selectors, media queries, custom properties and keyframes in doc summary.
 - Stats: line count + aggregate counts (funcs/classes/exports) only computed during enrichment.
 
 ## Performance Notes
@@ -88,7 +88,7 @@ Supported enrichment extensions now include: `.py .ts .tsx .js .jsx .cs .java .s
 - Persist per-extension Enrich selections across sessions.
 - Optional auto-enrich after structure scan.
 - Collapsible metadata regions for large outputs.
-- Deeper doc extraction: JSDoc/Javadoc, XML schema awareness, XSL template mode summarization.
+- Deeper doc extraction: enhance JSDoc/Javadoc param/return summarization, XML schema awareness, richer XSL match template classification.
 - Plugin registry for new parsers (Go, Rust, PHP, etc.).
 - Heuristic quality scoring (e.g., functions per LOC) for future analytics.
 

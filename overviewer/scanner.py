@@ -78,10 +78,24 @@ def extract_python_info(path: Path) -> Tuple[List[str], List[str], List[str], Li
 import re
 TS_JS_IMPORT_RE = re.compile(r"import\s+(?:[^'\"]+from\s+)?['\"]([^'\"]+)['\"]")
 TS_JS_FUNC_RE = re.compile(r"function\s+([a-zA-Z0-9_]+)|([a-zA-Z0-9_]+)\s*=\s*\([^)]*\)\s*=>")
-
-
 EXPORT_TS_JS_RE = re.compile(r"export\s+(?:default\s+)?(?:class|function|const|let|var)\s+([A-Za-z0-9_]+)|export\s*{\s*([^}]+)\s*}")
 CLASS_TS_JS_RE = re.compile(r"class\s+([A-Za-z0-9_]+)")
+EXPORT_TS_TYPE_RE = re.compile(r"export\s+(?:type|interface|enum)\s+([A-Za-z0-9_]+)")
+TS_DOC_BLOCK_RE = re.compile(r"/\*\*([^*]|\*(?!/))*\*/", re.DOTALL)
+
+def _summarize_ts_js_doc(text: str) -> str:
+    """Return first sentence of first JSDoc-style block."""
+    match = TS_DOC_BLOCK_RE.search(text)
+    if not match:
+        return ''
+    block = match.group(0)
+    # Remove /** */ markers
+    inner = re.sub(r"^/\*\*|\*/$", "", block).strip()
+    # Strip leading *
+    inner = re.sub(r"^\s*\*\s?", "", inner, flags=re.MULTILINE)
+    # First line / sentence
+    first_line = inner.split('\n')[0].strip()
+    return first_line[:500]
 
 def extract_ts_js_info(text: str):
     imports_raw = TS_JS_IMPORT_RE.findall(text)
@@ -97,12 +111,26 @@ def extract_ts_js_info(text: str):
         if m1:
             exports.append(m1)
         elif m2:
-            # split grouped exports
             for part in m2.split(','):
                 pname = part.strip().split(' as ')[0]
                 if pname:
                     exports.append(pname)
-    return imports, functions, classes, exports
+    # type/interface/enum exports
+    type_exports = EXPORT_TS_TYPE_RE.findall(text)
+    # Deduplicate while preserving order
+    seen = set()
+    dedup_exports: List[str] = []
+    for e in exports:
+        if e not in seen:
+            seen.add(e)
+            dedup_exports.append(e)
+    # Append type exports distinctly (avoid collisions)
+    for te in type_exports:
+        if te not in seen:
+            seen.add(te)
+            dedup_exports.append(te + " (type)")
+    doc_summary = _summarize_ts_js_doc(text)
+    return imports, functions, classes, dedup_exports, doc_summary
 
 # For C# and Java (very light heuristic)
 CSTYLE_IMPORT_RE = re.compile(r"using\s+([a-zA-Z0-9_.]+);|import\s+([a-zA-Z0-9_.]+);")
@@ -147,11 +175,19 @@ def extract_shell_info(text: str) -> Tuple[List[str], List[str], List[str], List
     sourced = [m[1] for m in SHELL_SOURCE_RE.findall(text)]
     funcs = SHELL_FUNC_RE.findall(text)
     doc_summary = ''
-    # First comment line (excluding shebang)
-    for line in text.splitlines():
+    # Multi-line top comment block (excluding shebang). Collect contiguous # lines.
+    lines = text.splitlines()
+    comment_block: List[str] = []
+    started = False
+    for line in lines:
         if line.startswith('#') and not line.startswith('#!'):
-            doc_summary = line.lstrip('#').strip()[:500]
+            comment_block.append(line.lstrip('#').strip())
+            started = True
+        elif started:
             break
+    if comment_block:
+        joined = ' '.join(comment_block).strip()
+        doc_summary = joined[:500]
     imports = []
     if shebang:
         imports.append(f"shebang:{shebang}")
@@ -163,18 +199,23 @@ XSL_TEMPLATE_RE = re.compile(r"<xsl:template[^>]*name=\"([^\"]+)\"", re.IGNORECA
 XSL_MATCHED_TEMPLATE_RE = re.compile(r"<xsl:template[^>]*match=\"([^\"]+)\"", re.IGNORECASE)
 XSL_IMPORT_RE = re.compile(r"<xsl:(?:import|include)\s+href=\"([^\"]+)\"", re.IGNORECASE)
 
+XSL_FUNCTION_RE = re.compile(r"<xsl:function[^>]*name=\"([^\"]+)\"", re.IGNORECASE)
+
 def extract_xsl_info(text: str) -> Tuple[List[str], List[str], List[str], List[str], str]:
     named_templates = XSL_TEMPLATE_RE.findall(text)
     matched_templates = XSL_MATCHED_TEMPLATE_RE.findall(text)
+    fn_functions = XSL_FUNCTION_RE.findall(text)
     imports = XSL_IMPORT_RE.findall(text)
-    # Functions/classes/exports not conceptually present; expose templates via functions
-    functions = named_templates + matched_templates
+    # Only treat named templates and xsl:function as 'functions'; matched templates summarized
+    functions = named_templates + fn_functions
     doc_summary = ''
-    # Optional: first <xsl:stylesheet> line attributes summary
     first_stylesheet = re.search(r"<xsl:stylesheet[^>]*>", text, re.IGNORECASE)
     if first_stylesheet:
         head = first_stylesheet.group(0)
-        doc_summary = head[:300]
+        # Collapse internal whitespace/newlines for readability and append counts comma-separated
+        compact = re.sub(r"\s+", " ", head).strip()
+        counts = f"named_templates:{len(named_templates)}, match_templates:{len(matched_templates)}, functions:{len(fn_functions)}"
+        doc_summary = f"{compact} {counts}"[:500]
     return imports, functions, [], [], doc_summary
 
 XML_ROOT_RE = re.compile(r"<([A-Za-z0-9_:-]+)(?:\s|>)")
@@ -184,11 +225,18 @@ def extract_xml_info(text: str) -> Tuple[List[str], List[str], List[str], List[s
     root_match = XML_ROOT_RE.search(text)
     root = root_match.group(1) if root_match else ''
     namespaces = XML_NS_RE.findall(text)
+    # Deduplicate namespaces
+    unique_ns = []
+    seen_ns = set()
+    for ns in namespaces:
+        if ns not in seen_ns:
+            seen_ns.add(ns)
+            unique_ns.append(ns)
     tags = set(re.findall(r"<([A-Za-z0-9_:-]+)", text))
     doc_summary = ''
     if root:
         doc_summary = f"root:{root} tags:{len(tags)}"[:500]
-    imports = namespaces  # treat namespaces as imports for context
+    imports = unique_ns  # treat namespaces as imports for context
     return imports, [], [], [], doc_summary
 
 DITA_KEYREF_RE = re.compile(r"keyref=\"([^\"]+)\"")
@@ -225,11 +273,15 @@ def extract_scss_info(text: str) -> Tuple[List[str], List[str], List[str], List[
 
 CSS_SELECTOR_RE = re.compile(r"^[^{]+{", re.MULTILINE)
 CSS_MEDIA_RE = re.compile(r"@media\s+([^{]+){", re.IGNORECASE)
+CSS_CUSTOM_PROP_RE = re.compile(r"--[A-Za-z0-9_-]+\s*:")
+CSS_KEYFRAMES_RE = re.compile(r"@keyframes\s+([A-Za-z0-9_-]+)")
 
 def extract_css_info(text: str) -> Tuple[List[str], List[str], List[str], List[str], str]:
     selectors = CSS_SELECTOR_RE.findall(text)
     medias = CSS_MEDIA_RE.findall(text)
-    doc_summary = f"selectors:{len(selectors)} media_queries:{len(medias)}"[:500]
+    custom_props = CSS_CUSTOM_PROP_RE.findall(text)
+    keyframes = CSS_KEYFRAMES_RE.findall(text)
+    doc_summary = f"selectors:{len(selectors)} media_queries:{len(medias)} custom_props:{len(custom_props)} keyframes:{len(keyframes)}"[:500]
     return [], [], [], [], doc_summary
 
 # --- Core scanning ---
@@ -305,9 +357,9 @@ def scan_project(root: Path, include_exts=None, use_cache: bool = False, parse_m
                     elif ext in TS_EXTS or ext in JS_EXTS:
                         text = path.read_text(encoding='utf-8', errors='ignore')
                         if not enrich_languages or enrich_languages.get('ts_js', True):
-                            imports, functions, classes, exports = extract_ts_js_info(text)
+                            imports, functions, classes, exports, doc_summary = extract_ts_js_info(text)
                         else:
-                            imports, functions, _, _ = extract_ts_js_info(text)
+                            imports, functions, classes, exports, doc_summary = extract_ts_js_info(text)
                     elif ext == CSHARP_EXT or ext == JAVA_EXT:
                         text = path.read_text(encoding='utf-8', errors='ignore')
                         if not enrich_languages or enrich_languages.get('cstyle', True):
@@ -335,6 +387,16 @@ def scan_project(root: Path, include_exts=None, use_cache: bool = False, parse_m
                     elif ext == XML_EXT:
                         text = path.read_text(encoding='utf-8', errors='ignore')
                         imports, functions, classes, exports, doc_summary = extract_xml_info(text)
+                # Vendor/minified heuristic
+                vendor = False
+                try:
+                    size_bytes = path.stat().st_size
+                    if ('.min.' in filename) or (ext in {'.js', '.css'} and size_bytes > 50_000 and line_count <= 10):
+                        vendor = True
+                except Exception:
+                    pass
+                if vendor and not doc_summary:
+                    doc_summary = 'vendor:minified file (overview simplified)'
                 if mtime is not None:
                     updated_cache[rel_key] = {
                         'mtime': mtime,
