@@ -12,7 +12,8 @@ class OverviewerGUI:
         self.root = tk.Tk()
         self.root.title('Overviewer')
         self.project_path_var = tk.StringVar()
-        self.mode_var = tk.StringVar(value=MODE_DEVELOPER)
+        # Default to AI mode
+        self.mode_var = tk.StringVar(value=MODE_AI)
         self.filetype_vars = {}  # dynamically populated after first scan
         self.cache_var = tk.BooleanVar(value=True)
         self.status_var = tk.StringVar(value='Idle')
@@ -48,6 +49,7 @@ class OverviewerGUI:
         tk.Label(options_frame, text='File Types (discovered):').pack(anchor='w')
         self.types_container = tk.Frame(options_frame)
         self.types_container.pack(fill=tk.X)
+        tk.Button(options_frame, text='Deselect All Types', command=self._deselect_all_types).pack(anchor='w', pady=3)
 
         bottom = tk.Frame(self.root)
         bottom.pack(fill=tk.X, padx=5, pady=2)
@@ -161,6 +163,13 @@ class OverviewerGUI:
                 self.root.after(0, show_err)
 
         threading.Thread(target=task, daemon=True).start()
+
+    def _deselect_all_types(self):
+        for ext, var in self.filetype_vars.items():
+            var.set(False)
+        # Rescan structure to update display without those files
+        if self.scanned_once:
+            self._scan_structure()
 
     def _enrich(self):
         # Second phase: parse metadata for selected extensions & languages

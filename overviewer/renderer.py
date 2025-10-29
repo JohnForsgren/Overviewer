@@ -52,7 +52,7 @@ def render_markdown(root: FolderNode, mode: str = MODE_DEVELOPER) -> str:
         for fi in sorted(folder.files, key=lambda f: f.name.lower()):
             prefix = f"{SYMBOL_STAR} " if fi.starred else ''
             lines.append(f"{indent}{prefix}{fi.name}")
-            if mode == MODE_AI:
+            if mode == MODE_AI and fi.enriched:
                 mid = meta_indent(depth)
                 if fi.skipped:
                     lines.append(f"{mid}{SYMBOL_INFO} Skipped: large file")

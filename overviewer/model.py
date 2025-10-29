@@ -18,6 +18,7 @@ class FileInfo:
     exports: List[str] = field(default_factory=list)
     doc_summary: Optional[str] = None
     skipped: bool = False  # large file skip indicator
+    enriched: bool = False  # metadata lines should display only after enrichment pass
 
 @dataclass
 class FolderNode:

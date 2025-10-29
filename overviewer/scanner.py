@@ -219,16 +219,17 @@ def scan_project(root: Path, include_exts=None, use_cache: bool = False, parse_m
                         'exports': exports,
                         'doc_summary': doc_summary
                     }
-            # line count
+            # line count only when enriching metadata
             line_count = 0
-            if not skipped:
+            if parse_metadata and not skipped:
                 try:
                     with path.open('r', encoding='utf-8', errors='ignore') as fh:
                         line_count = sum(1 for _ in fh)
                 except Exception:
                     line_count = 0
             fi = FileInfo(path=path, rel_path=rel_key, name=filename, ext=ext, starred=starred, imports=imports, functions=functions,
-                          line_count=line_count, classes=classes, exports=exports, doc_summary=doc_summary or None, skipped=skipped)
+                          line_count=line_count, classes=classes, exports=exports, doc_summary=doc_summary or None, skipped=skipped,
+                          enriched=parse_metadata)
             current_folder.add_file(fi)
     if use_cache:
         save_cache(root, {'files': updated_cache})
