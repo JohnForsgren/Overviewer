@@ -54,10 +54,21 @@ def render_markdown(root: FolderNode, mode: str = MODE_DEVELOPER) -> str:
             lines.append(f"{indent}{prefix}{fi.name}")
             if mode == MODE_AI:
                 mid = meta_indent(depth)
-                if fi.imports:
-                    lines.append(f"{mid}{SYMBOL_INFO} Imports: {', '.join(fi.imports[:25])}")
-                if fi.functions:
-                    lines.append(f"{mid}{SYMBOL_INFO} Functions: {', '.join(fi.functions[:25])}")
+                if fi.skipped:
+                    lines.append(f"{mid}{SYMBOL_INFO} Skipped: large file")
+                else:
+                    if fi.imports:
+                        lines.append(f"{mid}{SYMBOL_INFO} Imports: {', '.join(fi.imports[:25])}")
+                    if fi.functions:
+                        lines.append(f"{mid}{SYMBOL_INFO} Functions: {', '.join(fi.functions[:25])}")
+                    if fi.classes:
+                        lines.append(f"{mid}{SYMBOL_INFO} Classes: {', '.join(fi.classes[:10])}")
+                    if fi.exports:
+                        lines.append(f"{mid}{SYMBOL_INFO} Exports: {', '.join(fi.exports[:10])}")
+                    if fi.line_count:
+                        lines.append(f"{mid}{SYMBOL_INFO} Stats: LOC {fi.line_count} | funcs {len(fi.functions)} | classes {len(fi.classes)} | exports {len(fi.exports)}")
+                    if fi.doc_summary:
+                        lines.append(f"{mid}{SYMBOL_INFO} Doc: {fi.doc_summary}")
         for sub in sorted(folder.subfolders.values(), key=lambda s: s.name.lower()):
             walk(sub, depth + 1)
 

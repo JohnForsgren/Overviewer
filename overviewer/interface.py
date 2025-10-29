@@ -17,6 +17,13 @@ class OverviewerGUI:
         self.cache_var = tk.BooleanVar(value=True)
         self.status_var = tk.StringVar(value='Idle')
         self.count_var = tk.StringVar(value='Files: 0 | Folders: 0')
+        self.token_var = tk.StringVar(value='Tokens: 0')
+        # Language enrichment toggles
+        self.lang_vars = {
+            'python': tk.BooleanVar(value=True),
+            'ts_js': tk.BooleanVar(value=True),
+            'cstyle': tk.BooleanVar(value=True)
+        }
         self.colorized = True  # colorization enabled by default
         self._build()
         self.scanned_once = False
@@ -29,7 +36,9 @@ class OverviewerGUI:
         tk.Button(top, text='Browse', command=self._browse).pack(side=tk.LEFT)
         tk.Label(top, text='Mode:').pack(side=tk.LEFT, padx=10)
         tk.OptionMenu(top, self.mode_var, MODE_DEVELOPER, MODE_AI).pack(side=tk.LEFT)
-        tk.Button(top, text='Scan', command=self._scan).pack(side=tk.LEFT, padx=10)
+        tk.Button(top, text='Scan (Structure)', command=self._scan_structure).pack(side=tk.LEFT, padx=10)
+        self.enrich_btn = tk.Button(top, text='Enrich Context', command=self._enrich, state='disabled')
+        self.enrich_btn.pack(side=tk.LEFT)
         tk.Button(top, text='Save Markdown', command=self._save).pack(side=tk.LEFT)
         # Numbering now always on (removed toggle)
         tk.Button(top, text='Colorize', command=self._toggle_colors).pack(side=tk.LEFT, padx=5)
@@ -44,6 +53,7 @@ class OverviewerGUI:
         bottom.pack(fill=tk.X, padx=5, pady=2)
         tk.Checkbutton(bottom, text='Use Cache', variable=self.cache_var).pack(side=tk.LEFT)
         tk.Label(bottom, textvariable=self.count_var).pack(side=tk.LEFT, padx=10)
+        tk.Label(bottom, textvariable=self.token_var).pack(side=tk.LEFT, padx=10)
         tk.Label(bottom, textvariable=self.status_var, fg='gray').pack(side=tk.RIGHT)
 
         # Scrollable text output
@@ -55,12 +65,19 @@ class OverviewerGUI:
         yscroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.output_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
+        # Language enrichment panel
+        lang_frame = tk.LabelFrame(self.root, text='AI Context Enrichment (per language)')
+        lang_frame.pack(fill=tk.X, padx=5, pady=5)
+        for lang_key, var in self.lang_vars.items():
+            label = {'python': 'Python', 'ts_js': 'TypeScript/JavaScript', 'cstyle': 'C#/Java'}[lang_key]
+            tk.Checkbutton(lang_frame, text=label, variable=var, command=self._rescan_after_toggle).pack(side=tk.LEFT, padx=5)
+
     def _browse(self):
         chosen = filedialog.askdirectory()
         if chosen:
             self.project_path_var.set(chosen)
 
-    def _scan(self):
+    def _scan_structure(self):
         import threading
         path_str = self.project_path_var.get().strip()
         if not path_str:
@@ -94,12 +111,11 @@ class OverviewerGUI:
 
         def task():
             try:
-                # First scan without metadata if first time
-                tree = scan_project(root_path, include_exts=include_exts, use_cache=use_cache, parse_metadata=self.scanned_once)
-                # Populate extensions dynamically after first scan
+                # First phase: structure only (no metadata)
+                tree = scan_project(root_path, include_exts=include_exts, use_cache=use_cache,
+                                    parse_metadata=False)
                 if not self.scanned_once:
                     exts = sorted({f.ext for f in _iter_files(tree) if f.ext})
-                    # Count files per extension (baseline counts from initial full scan)
                     ext_counts = {}
                     for f in _iter_files(tree):
                         if f.ext:
@@ -115,13 +131,8 @@ class OverviewerGUI:
                         count = ext_counts.get(ext, 0)
                         tk.Label(ext_frame, text=f"{count} {ext}", fg='gray').pack(anchor='w')
                     self.scanned_once = True
-                    # Save config after initial detection
                     save_config(root_path, {'extensions': {e: True for e in self.filetype_vars}})
-                    # After populating extensions, trigger second pass with metadata for selected ones
-                    selected_exts = [e for e, v in self.filetype_vars.items() if v.get()]
-                    tree = scan_project(root_path, include_exts=selected_exts, use_cache=use_cache, parse_metadata=True)
                 else:
-                    # Save current toggles
                     save_config(root_path, {'extensions': {e: v.get() for e, v in self.filetype_vars.items()}})
                 md = render_markdown(tree, mode=self.mode_var.get())
                 def update_ui():
@@ -129,13 +140,17 @@ class OverviewerGUI:
                     self.output_text.insert(tk.END, md)
                     files_count, folders_count = _count_objects(tree)
                     self.count_var.set(f'Files: {files_count} | Folders: {folders_count}')
+                    text_len = len(md)
+                    est_tokens = text_len // 4
+                    self.token_var.set(f'Tokens: {est_tokens}')
                     self.status_var.set('Done')
                     self.root.config(cursor='')
                     progress_win.destroy()
                     if self.colorized:
                         self._apply_colors()
-                    if self.colorized:
-                        self._apply_colors()
+                    # Enable enrich button if AI mode
+                    if self.mode_var.get() == MODE_AI:
+                        self.enrich_btn.config(state='normal')
                 self.root.after(0, update_ui)
             except Exception as e:
                 def show_err():
@@ -147,11 +162,50 @@ class OverviewerGUI:
 
         threading.Thread(target=task, daemon=True).start()
 
+    def _enrich(self):
+        # Second phase: parse metadata for selected extensions & languages
+        if not self.scanned_once:
+            messagebox.showinfo('Info', 'Run structure scan first.')
+            return
+        import threading
+        path_str = self.project_path_var.get().strip()
+        root_path = Path(path_str)
+        use_cache = self.cache_var.get()
+        include_exts = [ext for ext, var in self.filetype_vars.items() if var.get()]
+        self.status_var.set('Enriching...')
+        self.root.config(cursor='watch')
+        def task():
+            try:
+                enrich_languages = {k: v.get() for k, v in self.lang_vars.items()}
+                tree = scan_project(root_path, include_exts=include_exts, use_cache=use_cache, parse_metadata=True,
+                                    enrich_languages=enrich_languages if self.mode_var.get() == MODE_AI else None)
+                md = render_markdown(tree, mode=self.mode_var.get())
+                def update_ui():
+                    self.output_text.delete('1.0', tk.END)
+                    self.output_text.insert(tk.END, md)
+                    files_count, folders_count = _count_objects(tree)
+                    self.count_var.set(f'Files: {files_count} | Folders: {folders_count}')
+                    text_len = len(md)
+                    est_tokens = text_len // 4
+                    self.token_var.set(f'Tokens: {est_tokens}')
+                    self.status_var.set('Done (Enriched)')
+                    self.root.config(cursor='')
+                    if self.colorized:
+                        self._apply_colors()
+                self.root.after(0, update_ui)
+            except Exception as e:
+                def show_err():
+                    self.status_var.set('Error')
+                    self.root.config(cursor='')
+                    messagebox.showerror('Error', str(e))
+                self.root.after(0, show_err)
+        threading.Thread(target=task, daemon=True).start()
+
     def _rescan_after_toggle(self):
-        # Only rescan metadata with selected extensions (fast path) but keep using cache
+        # For structure changes, rescan structure only
         if not self.scanned_once:
             return
-        self._scan()
+        self._scan_structure()
 
     def _toggle_colors(self):
         self.colorized = not self.colorized

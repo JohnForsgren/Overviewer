@@ -12,6 +12,12 @@ class FileInfo:
     starred: bool = False
     imports: List[str] = field(default_factory=list)
     functions: List[str] = field(default_factory=list)
+    # Step 2 enriched metadata
+    line_count: int = 0
+    classes: List[str] = field(default_factory=list)
+    exports: List[str] = field(default_factory=list)
+    doc_summary: Optional[str] = None
+    skipped: bool = False  # large file skip indicator
 
 @dataclass
 class FolderNode:
