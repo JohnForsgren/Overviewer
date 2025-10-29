@@ -1,0 +1,2 @@
+# Core runtime dependencies
+rich>=13.7.0

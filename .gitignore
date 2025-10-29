@@ -1,0 +1,91 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+.coverage*
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+.cache/
+
+# Type checkers & linters
+.mypy_cache/
+.pyre/
+.pytype/
+ruff_cache/
+
+# Jupyter/IPython
+.ipynb_checkpoints/
+
+# Logs & dumps
+*.log
+*.pot
+*.mo
+coverage.xml
+pytestdebug.log
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.orig
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node / front-end (if scanning mixed repos)
+node_modules/
+
+# Binary / assets (not source)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.zip
+*.tar
+*.gz
+*.jar
+*.exe
+*.dll
+*.so
+*.pdf
+*.mp4
+*.mp3
+*.wav
+*.ttf
+*.otf
+*.woff
+*.woff2
+
+# Local cache / metadata produced by overviewer (if any added later)
+overviewer_cache.json
+
+# Environment variables / secrets
+.env
+.env.*
