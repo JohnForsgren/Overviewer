@@ -12,19 +12,19 @@ class OverviewerGUI:
         self.root = tk.Tk()
         self.root.title('Overviewer')
         self.project_path_var = tk.StringVar()
+        self.current_root = None  # track last scanned root to detect changes
         # Default to AI mode
         self.mode_var = tk.StringVar(value=MODE_AI)
-        self.filetype_vars = {}  # dynamically populated after first scan
+        # Per-extension include vars
+        self.filetype_vars = {}  # ext -> BooleanVar (include in scan/output)
+        # Per-extension enrichment vars (for AI metadata: classes/exports/line counts/doc summary)
+        self.enrich_ext_vars = {}  # ext -> BooleanVar
+        # Supported code/enrichment extensions (central reference)
+        self.supported_enrich_exts = {'.py', '.ts', '.tsx', '.js', '.jsx', '.cs', '.java', '.sh', '.xsl', '.xml', '.dita', '.ditamap', '.scss', '.css'}
         self.cache_var = tk.BooleanVar(value=True)
         self.status_var = tk.StringVar(value='Idle')
         self.count_var = tk.StringVar(value='Files: 0 | Folders: 0')
         self.token_var = tk.StringVar(value='Tokens: 0')
-        # Language enrichment toggles
-        self.lang_vars = {
-            'python': tk.BooleanVar(value=True),
-            'ts_js': tk.BooleanVar(value=True),
-            'cstyle': tk.BooleanVar(value=True)
-        }
         self.colorized = True  # colorization enabled by default
         self._build()
         self.scanned_once = False
@@ -49,7 +49,11 @@ class OverviewerGUI:
         tk.Label(options_frame, text='File Types (discovered):').pack(anchor='w')
         self.types_container = tk.Frame(options_frame)
         self.types_container.pack(fill=tk.X)
-        tk.Button(options_frame, text='Deselect All Types', command=self._deselect_all_types).pack(anchor='w', pady=3)
+        btns_frame = tk.Frame(options_frame)
+        btns_frame.pack(fill=tk.X)
+        tk.Button(btns_frame, text='Select All Types', command=self._select_all_types).pack(side=tk.LEFT, pady=3, padx=0)
+        tk.Button(btns_frame, text='Deselect All Types', command=self._deselect_all_types).pack(side=tk.LEFT, pady=3, padx=6)
+        tk.Button(btns_frame, text='Select Only Supported Code Files', command=self._select_supported_code_types).pack(side=tk.LEFT, pady=3, padx=6)
 
         bottom = tk.Frame(self.root)
         bottom.pack(fill=tk.X, padx=5, pady=2)
@@ -67,12 +71,7 @@ class OverviewerGUI:
         yscroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.output_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Language enrichment panel
-        lang_frame = tk.LabelFrame(self.root, text='AI Context Enrichment (per language)')
-        lang_frame.pack(fill=tk.X, padx=5, pady=5)
-        for lang_key, var in self.lang_vars.items():
-            label = {'python': 'Python', 'ts_js': 'TypeScript/JavaScript', 'cstyle': 'C#/Java'}[lang_key]
-            tk.Checkbutton(lang_frame, text=label, variable=var, command=self._rescan_after_toggle).pack(side=tk.LEFT, padx=5)
+        # Note: language panel removed; enrichment controlled per extension
 
     def _browse(self):
         chosen = filedialog.askdirectory()
@@ -90,11 +89,17 @@ class OverviewerGUI:
             messagebox.showerror('Error', 'Path does not exist.')
             return
 
-        # Load config if first time scanning this root
-        config = load_config(root_path)
-        if not self.scanned_once and 'extensions' in config:
-            # Pre-populate extensions after initial scan populates them
-            pass
+        # Detect root change: if different from previous, reset extension UI state
+        if self.current_root is None or root_path.resolve() != self.current_root:
+            self.scanned_once = False
+            self.filetype_vars.clear()
+            self.enrich_ext_vars.clear()
+            for child in self.types_container.winfo_children():
+                child.destroy()
+            self.current_root = root_path.resolve()
+
+        # Load config only if starting fresh for this root
+        config = load_config(root_path) if not self.scanned_once else {}
 
         use_cache = self.cache_var.get()
         include_exts = None
@@ -116,26 +121,52 @@ class OverviewerGUI:
                 # First phase: structure only (no metadata)
                 tree = scan_project(root_path, include_exts=include_exts, use_cache=use_cache,
                                     parse_metadata=False)
+                # Always recompute counts (even after first scan) for display updates
+                ext_counts = {}
+                all_exts = set()
+                for f in _iter_files(tree):
+                    if f.ext:
+                        all_exts.add(f.ext)
+                        ext_counts[f.ext] = ext_counts.get(f.ext, 0) + 1
                 if not self.scanned_once:
-                    exts = sorted({f.ext for f in _iter_files(tree) if f.ext})
-                    ext_counts = {}
-                    for f in _iter_files(tree):
-                        if f.ext:
-                            ext_counts[f.ext] = ext_counts.get(f.ext, 0) + 1
                     for child in self.types_container.winfo_children():
                         child.destroy()
-                    for ext in exts:
-                        var = tk.BooleanVar(value=True)
-                        self.filetype_vars[ext] = var
-                        ext_frame = tk.Frame(self.types_container)
+                    supported_enrich_exts = {'.py', '.ts', '.tsx', '.js', '.jsx', '.cs', '.java', '.sh', '.xsl', '.xml', '.dita', '.ditamap', '.scss', '.css'}
+                    for ext in sorted(all_exts):
+                        include_var = tk.BooleanVar(value=True)
+                        enrich_var = tk.BooleanVar(value=True) if ext in supported_enrich_exts else None
+                        self.filetype_vars[ext] = include_var
+                        if enrich_var is not None:
+                            self.enrich_ext_vars[ext] = enrich_var
+                        ext_frame = tk.Frame(self.types_container, bd=1, relief=tk.FLAT)
                         ext_frame.pack(side=tk.LEFT, padx=4, pady=2)
-                        tk.Checkbutton(ext_frame, text=ext, variable=var, command=self._rescan_after_toggle).pack(anchor='w')
+                        tk.Checkbutton(ext_frame, text=ext, variable=include_var, command=self._rescan_after_toggle).pack(anchor='w')
+                        if enrich_var is not None:
+                            tk.Checkbutton(ext_frame, text='Enrich', variable=enrich_var).pack(anchor='w')
                         count = ext_counts.get(ext, 0)
-                        tk.Label(ext_frame, text=f"{count} {ext}", fg='gray').pack(anchor='w')
+                        tk.Label(ext_frame, text=f"{count} files", fg='gray').pack(anchor='w')
+                    # Apply stored config if available (restore include states)
+                    if config.get('extensions'):
+                        for ext, enabled in config['extensions'].items():
+                            if ext in self.filetype_vars:
+                                self.filetype_vars[ext].set(bool(enabled))
                     self.scanned_once = True
-                    save_config(root_path, {'extensions': {e: True for e in self.filetype_vars}})
                 else:
-                    save_config(root_path, {'extensions': {e: v.get() for e, v in self.filetype_vars.items()}})
+                    # Update counts labels (keep frames)
+                    for child in self.types_container.winfo_children():
+                        # Each ext_frame has children: include chk, enrich chk, count label
+                        labels = [w for w in child.winfo_children() if isinstance(w, tk.Label)]
+                        if labels:
+                            # Last label is count
+                            lbl = labels[-1]
+                            # Determine ext from first checkbox text
+                            chks = [w for w in child.winfo_children() if isinstance(w, tk.Checkbutton)]
+                            if chks:
+                                ext_text = chks[0].cget('text')
+                                if ext_text in ext_counts:
+                                    lbl.config(text=f"{ext_counts[ext_text]} files")
+                # Persist include selections only
+                save_config(root_path, {'extensions': {e: v.get() for e, v in self.filetype_vars.items()}})
                 md = render_markdown(tree, mode=self.mode_var.get())
                 def update_ui():
                     self.output_text.delete('1.0', tk.END)
@@ -167,9 +198,16 @@ class OverviewerGUI:
     def _deselect_all_types(self):
         for ext, var in self.filetype_vars.items():
             var.set(False)
-        # Rescan structure to update display without those files
-        if self.scanned_once:
-            self._scan_structure()
+        # Do not immediately rescan to avoid losing extension visibility when zero selected.
+
+    def _select_all_types(self):
+        for ext, var in self.filetype_vars.items():
+            var.set(True)
+
+    def _select_supported_code_types(self):
+        # Include only extensions we have enrichment logic for; others disabled
+        for ext, var in self.filetype_vars.items():
+            var.set(ext in self.supported_enrich_exts)
 
     def _enrich(self):
         # Second phase: parse metadata for selected extensions & languages
@@ -185,9 +223,17 @@ class OverviewerGUI:
         self.root.config(cursor='watch')
         def task():
             try:
-                enrich_languages = {k: v.get() for k, v in self.lang_vars.items()}
+                # Map per-extension enrichment selections to language groups used by scanner
+                if self.mode_var.get() == MODE_AI:
+                    enrich_languages = {
+                        'python': any(self.enrich_ext_vars.get(e, tk.BooleanVar(value=False)).get() for e in ['.py']),
+                        'ts_js': any(self.enrich_ext_vars.get(e, tk.BooleanVar(value=False)).get() for e in ['.ts', '.tsx', '.js', '.jsx']),
+                        'cstyle': any(self.enrich_ext_vars.get(e, tk.BooleanVar(value=False)).get() for e in ['.cs', '.java'])
+                    }
+                else:
+                    enrich_languages = None
                 tree = scan_project(root_path, include_exts=include_exts, use_cache=use_cache, parse_metadata=True,
-                                    enrich_languages=enrich_languages if self.mode_var.get() == MODE_AI else None)
+                                    enrich_languages=enrich_languages)
                 md = render_markdown(tree, mode=self.mode_var.get())
                 def update_ui():
                     self.output_text.delete('1.0', tk.END)

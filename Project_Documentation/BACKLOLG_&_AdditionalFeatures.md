@@ -1,6 +1,11 @@
 
 
 
+== Small additions ==
+- There should be in addition to "Deselectt all Types" a "Select all types" button. 
+
+
+
 
 == Ensuring Maximum quality of the output == 
 The important next step is to ensure that the OPTIMAL LOGIC is used for the RIGHT LANGUAGES. This concerns our PDF and SPA applications. 
@@ -30,3 +35,31 @@ PDF application:
 
 SPA LOCAL SERVER: 
     This is less important and can be handled later. I guess it is mainly just the java files that matter here. 
+
+
+
+
+=== AFTER THE CODE EDITS HAVE BEEN MADE ===
+
+Send the inpuit chat to a new AI and ask it to judge the current quality of the most important filfes 
+
+
+Send the inpuit chat to a new AI and ask it to judge the current quality oif the current output based on the following: 
+1. The input documentation / project documentation
+2. A current output of the overviewer-app (i.e the whole folder structure with associated info)
+3. A selection of examples of files from each of the mainfile types (.tsx, .scss, .xsl, etc) -> THis is placed in the UAT Testing Folder
+
+
+Then ask for additional ideas of what can be done to provide more context 
+
+
+    === UPDATE REGARDING THE UAT TESTING === 
+
+    TODO NOW:  <<<<<<<<<<<<<<< CONTINUE HERE 
+    - Populate the UAT with example files and test. 
+    <<<< ONLY THE TYPSCRIPT REMAINS 
+
+
+=== ADDITIONALLY:: Implement the developer setting ===
+As mentioned in the Starting_Instructions, the Developer setting is intended to have info digestible for a developer. I don't have a clear idea yet on what might be included here. 
+ 

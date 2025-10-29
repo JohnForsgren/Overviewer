@@ -1,4 +1,6 @@
-# Overviewer Project Documentation (Concise Context)
+# Overviewer Project Documentation (AI Onboarding Snapshot)
+
+Purpose of this document: Rapidly orient an AI (or a human skimming fast) to the current feature set, architecture touch‑points, and parsing/enrichment logic. It is intentionally concise and NOT a user guide or exhaustive operational manual. It describes what exists (and key design intentions) so follow‑up reasoning or code generation can proceed with minimal clarification.
 
 ## Feature Summary
 Core purpose: Generate a structured, human‑readable Markdown “blueprint” of a source tree for fast onboarding (Developer mode) or richer semantic context (AI mode) while staying performant on large repos.
@@ -16,7 +18,7 @@ Features:
 - Caching: JSON cache keyed by file path + mtime to avoid re‑parsing unchanged files between enrichment runs.
 - Config persistence: extension toggle states saved per root for consistent UX across sessions.
 - Performance optimizations: directory pruning, binary extension skipping, file size guard, deferred metadata parsing until enrichment.
-- GUI (Tkinter): threaded operations, extension toggles with counts, language enrichment toggles (Python / TS-JS / C#-Java), colorization, token estimate, deselect-all types.
+- GUI (Tkinter): threaded operations, extension toggles with counts, per‑extension enrich checkboxes (only shown for supported enrichment file types), colorization, token estimate, select/deselect utilities.
 - CLI entrypoint: scan rendering and blueprint ingestion via arguments.
 - Blueprint ingestion: parse existing blueprint to focus future scans (regex of heading patterns) – adapted for hashless headings.
 - Deterministic color palette applied to file lines by extension; recolorable on demand.
@@ -39,17 +41,18 @@ Features:
 ## High-Level Flow (Two-Phase Model)
 1. User selects root (GUI) or passes via CLI.
 2. Structure Scan (no metadata): hierarchy + extension discovery only.
-3. User adjusts: extension checkboxes (visibility), "Deselect All Types" if needed, language enrichment toggles (Python / TS-JS / C#-Java).
-4. Enrichment Pass (AI mode only): deep parse limited to selected extensions & enabled languages; populates imports, functions, classes, exports, stats, doc summary.
+3. User adjusts: extension checkboxes (visibility). Utilities: Select All, Deselect All, Select Only Supported Code Files. Per‑extension "Enrich" toggles determine which types receive deep parsing.
+4. Enrichment Pass (AI mode only): deep parse limited to selected extensions & only those with Enrich enabled; populates imports, functions, classes, exports, stats, doc summary.
 5. Renderer outputs folder headings, description placeholders, starred files. If enriched, AI metadata lines appear under each file.
 6. Token estimate displayed (character_count / 4). User can re-run enrichment after changing toggles or save Markdown.
 
-## GUI Additions (Step 2 Update)
-- Buttons: "Scan (Structure)" and "Enrich Context" (second enabled after first pass in AI mode).
-- "Deselect All Types" button quickly unchecks every extension.
-- Language Enrichment toggles: granular control to include/exclude metadata parsing per language family.
-- Token count label: approximate tokens = total characters / 4 after each scan or enrichment.
-- Enrichment gating: no 📕 metadata lines appear until the user presses Enrich (reduces initial latency).
+## GUI Elements (Current)
+- Buttons: "Scan (Structure)", "Enrich Context" (enabled after first structure pass in AI mode), "Save Markdown".
+- Extension area: dynamically discovered extensions each with an Include checkbox and (if supported) an Enrich checkbox.
+- Utility buttons: Select All Types, Deselect All Types, Select Only Supported Code Files.
+- Token count label: approximate tokens = characters / 4.
+- Colorize toggle for extension‑based coloring of file lines.
+- Enrichment gating: no 📕 metadata lines until explicit Enrich.
 
 ## Metadata Lines (AI Mode After Enrichment)
 Each enriched file may include (only lines with data are shown; order preserved):
@@ -62,25 +65,36 @@ Each enriched file may include (only lines with data are shown; order preserved)
 If a file exceeded size guard: 📕 Skipped: large file
 
 ## Rich Metadata Extraction Details
-- Python: AST for imports, functions, classes; exports via __all__ or top-level defs; docstring first line.
-- TS/JS: Regex for imports, functions, classes, exported symbols (`export` statements); first doc comment not yet extracted (future improvement). 
-- C#/Java: Regex heuristics for imports (`using`/`import`), function-like signatures, classes, and exported/public identifiers; first block or line comment group as doc summary.
-- Stats: simple line count captured only during enrichment (performance optimization).
+Supported enrichment extensions now include: `.py .ts .tsx .js .jsx .cs .java .sh .xsl .xml .dita .ditamap .scss .css`
+
+- Python (.py): AST for imports, functions, classes; exports via `__all__` or top-level defs; first docstring line.
+- TypeScript / JavaScript (.ts .tsx .js .jsx): Regex for imports, functions, classes, exported symbols; (doc extraction TBD).
+- C# / Java (.cs .java): Regex imports, function-like signatures, classes, public identifiers; first block or line comment group as doc summary.
+- Shell (.sh): Shebang + sourced scripts treated as imports; function definitions via `name() {`; first non-shebang comment line as doc summary; star heuristic for filenames containing deploy/start/run.
+- XSL (.xsl): `<xsl:import|include>` as imports; named + match templates aggregated as functions; stylesheet tag snippet as doc summary.
+- XML (.xml): Root element + namespace declarations (treated as imports); distinct tag count summarized in doc line.
+- DITA (.dita .ditamap): Root element; keyrefs (imports); href count; summary of root + keyref/href counts.
+- SCSS (.scss): `@use/@import` targets as imports; mixins as functions; counts for vars/mixins/selectors in doc summary.
+- CSS (.css): Count of selectors and media queries in doc summary.
+- Stats: line count + aggregate counts (funcs/classes/exports) only computed during enrichment.
 
 ## Performance Notes
-- Initial structure scan skips reading full file contents except to enumerate names; enrichment defers heavy parsing until explicitly requested.
-- Large file (>400KB) skip policy unchanged; such files receive only a skip marker.
-- Line count calculation deferred to enrichment reduces first-pass time on large trees.
+- Initial structure scan avoids parsing content bodies; enrichment defers heavy parsing until requested.
+- Large file (>400KB) skip policy unchanged; skipped files get a marker (no expensive parsing).
+- Line counts only during enrichment.
+- Regex extraction additions (shell/xsl/xml/dita/scss/css) are lightweight; each runs only on explicitly selected, enriched extensions.
 
 ## Future Considerations
-- Optional auto-enrich toggle post-structure scan.
-- Collapsible metadata sections for very large outputs.
-- Additional languages (Go, Rust) via pluggable parser registry.
-- More robust doc extraction for TS/JS (JSDoc) and Java (Javadoc multi-line summarization).
-- Select-All counterpart to Deselect-All.
+- Persist per-extension Enrich selections across sessions.
+- Optional auto-enrich after structure scan.
+- Collapsible metadata regions for large outputs.
+- Deeper doc extraction: JSDoc/Javadoc, XML schema awareness, XSL template mode summarization.
+- Plugin registry for new parsers (Go, Rust, PHP, etc.).
+- Heuristic quality scoring (e.g., functions per LOC) for future analytics.
 
 ## Notes
-- Colorization and formatting do not alter underlying output semantics (safe for ingestion by tooling expecting plain text).
-- Large binary or oversized source files are skipped from deep parsing to preserve responsiveness.
-- The design aims to keep tests minimal but focused on structural guarantees (presence of core markers, star symbol, headings).
+- This file is intentionally concise and factual; omit marketing prose.
+- Colorization & formatting do not alter semantic content (safe for downstream ingestion).
+- Oversized or binary files are skipped for performance; logic is deterministic given inputs + toggles.
+- Tests (expanding) should assert structural invariants rather than replicate parser internals.
 

@@ -13,6 +13,12 @@ TS_EXTS = {'.ts', '.tsx'}
 JS_EXTS = {'.js', '.jsx'}
 CSHARP_EXT = '.cs'
 JAVA_EXT = '.java'
+SHELL_EXT = '.sh'
+XSL_EXT = '.xsl'
+XML_EXT = '.xml'
+DITA_EXTS = {'.dita', '.ditamap'}
+SCSS_EXT = '.scss'
+CSS_EXT = '.css'
 
 # --- Parsing helpers ---
 
@@ -128,6 +134,104 @@ def extract_cstyle_info(text: str):
             doc_summary = line_comments[0].strip()[:500]
     return imports, functions, classes, exports, doc_summary
 
+# --- Additional language/group helpers ---
+
+SHELL_FUNC_RE = re.compile(r"^([A-Za-z0-9_]+)\s*\(\)\s*{", re.MULTILINE)
+SHELL_SOURCE_RE = re.compile(r"^\s*(?:source|\.)\s+(['\"]?)([^'\"\s]+)\1", re.MULTILINE)
+SHELL_SHEBANG_RE = re.compile(r"^#!(.+)$", re.MULTILINE)
+
+def extract_shell_info(text: str) -> Tuple[List[str], List[str], List[str], List[str], str]:
+    # Shell: treat sourced files as imports, functions via name() {, no classes/exports
+    shebang_match = SHELL_SHEBANG_RE.search(text)
+    shebang = shebang_match.group(1).strip() if shebang_match else ''
+    sourced = [m[1] for m in SHELL_SOURCE_RE.findall(text)]
+    funcs = SHELL_FUNC_RE.findall(text)
+    doc_summary = ''
+    # First comment line (excluding shebang)
+    for line in text.splitlines():
+        if line.startswith('#') and not line.startswith('#!'):
+            doc_summary = line.lstrip('#').strip()[:500]
+            break
+    imports = []
+    if shebang:
+        imports.append(f"shebang:{shebang}")
+    imports.extend(sourced)
+    # Star heuristic handled outside (filename check)
+    return imports, funcs, [], [], doc_summary
+
+XSL_TEMPLATE_RE = re.compile(r"<xsl:template[^>]*name=\"([^\"]+)\"", re.IGNORECASE)
+XSL_MATCHED_TEMPLATE_RE = re.compile(r"<xsl:template[^>]*match=\"([^\"]+)\"", re.IGNORECASE)
+XSL_IMPORT_RE = re.compile(r"<xsl:(?:import|include)\s+href=\"([^\"]+)\"", re.IGNORECASE)
+
+def extract_xsl_info(text: str) -> Tuple[List[str], List[str], List[str], List[str], str]:
+    named_templates = XSL_TEMPLATE_RE.findall(text)
+    matched_templates = XSL_MATCHED_TEMPLATE_RE.findall(text)
+    imports = XSL_IMPORT_RE.findall(text)
+    # Functions/classes/exports not conceptually present; expose templates via functions
+    functions = named_templates + matched_templates
+    doc_summary = ''
+    # Optional: first <xsl:stylesheet> line attributes summary
+    first_stylesheet = re.search(r"<xsl:stylesheet[^>]*>", text, re.IGNORECASE)
+    if first_stylesheet:
+        head = first_stylesheet.group(0)
+        doc_summary = head[:300]
+    return imports, functions, [], [], doc_summary
+
+XML_ROOT_RE = re.compile(r"<([A-Za-z0-9_:-]+)(?:\s|>)")
+XML_NS_RE = re.compile(r"xmlns(?::[A-Za-z0-9_-]+)?=\"[^\"]+\"")
+
+def extract_xml_info(text: str) -> Tuple[List[str], List[str], List[str], List[str], str]:
+    root_match = XML_ROOT_RE.search(text)
+    root = root_match.group(1) if root_match else ''
+    namespaces = XML_NS_RE.findall(text)
+    tags = set(re.findall(r"<([A-Za-z0-9_:-]+)", text))
+    doc_summary = ''
+    if root:
+        doc_summary = f"root:{root} tags:{len(tags)}"[:500]
+    imports = namespaces  # treat namespaces as imports for context
+    return imports, [], [], [], doc_summary
+
+DITA_KEYREF_RE = re.compile(r"keyref=\"([^\"]+)\"")
+DITA_HREF_RE = re.compile(r"href=\"([^\"]+)\"")
+
+def extract_dita_info(text: str, ext: str) -> Tuple[List[str], List[str], List[str], List[str], str]:
+    root_match = XML_ROOT_RE.search(text)
+    root = root_match.group(1) if root_match else ''
+    keyrefs = DITA_KEYREF_RE.findall(text)
+    hrefs = DITA_HREF_RE.findall(text)
+    doc_summary = ''
+    if root:
+        doc_summary = f"root:{root} keyrefs:{len(keyrefs)} hrefs:{len(hrefs)}"[:500]
+    imports = keyrefs  # expose keyrefs
+    functions: List[str] = []
+    return imports, functions, [], [], doc_summary
+
+SCSS_VAR_RE = re.compile(r"\$([A-Za-z0-9_-]+):")
+SCSS_MIXIN_RE = re.compile(r"@mixin\s+([A-Za-z0-9_-]+)")
+SCSS_SELECTOR_RE = re.compile(r"^[^{]+{", re.MULTILINE)
+
+def extract_scss_info(text: str) -> Tuple[List[str], List[str], List[str], List[str], str]:
+    vars_found = SCSS_VAR_RE.findall(text)
+    mixins = SCSS_MIXIN_RE.findall(text)
+    selectors = SCSS_SELECTOR_RE.findall(text)
+    doc_summary = f"vars:{len(vars_found)} mixins:{len(mixins)} selectors:{len(selectors)}"[:500]
+    imports: List[str] = []
+    # @use and @import directives
+    for m in re.findall(r"@(use|import)\s+['\"]([^'\"]+)['\"]", text):
+        imports.append(m[1])
+    # treat mixins as functions
+    functions = mixins
+    return imports, functions, [], [], doc_summary
+
+CSS_SELECTOR_RE = re.compile(r"^[^{]+{", re.MULTILINE)
+CSS_MEDIA_RE = re.compile(r"@media\s+([^{]+){", re.IGNORECASE)
+
+def extract_css_info(text: str) -> Tuple[List[str], List[str], List[str], List[str], str]:
+    selectors = CSS_SELECTOR_RE.findall(text)
+    medias = CSS_MEDIA_RE.findall(text)
+    doc_summary = f"selectors:{len(selectors)} media_queries:{len(medias)}"[:500]
+    return [], [], [], [], doc_summary
+
 # --- Core scanning ---
 
 MAX_PARSE_SIZE = 400_000  # bytes: skip metadata parsing for very large files
@@ -210,6 +314,27 @@ def scan_project(root: Path, include_exts=None, use_cache: bool = False, parse_m
                             imports, functions, classes, exports, doc_summary = extract_cstyle_info(text)
                         else:
                             imports, functions, _, _, _ = extract_cstyle_info(text)
+                    elif ext == SHELL_EXT:
+                        text = path.read_text(encoding='utf-8', errors='ignore')
+                        imports, functions, classes, exports, doc_summary = extract_shell_info(text)
+                        # star heuristic for critical scripts
+                        if any(k in filename.lower() for k in ('deploy', 'start', 'run')):
+                            starred = True
+                    elif ext == XSL_EXT:
+                        text = path.read_text(encoding='utf-8', errors='ignore')
+                        imports, functions, classes, exports, doc_summary = extract_xsl_info(text)
+                    elif ext in DITA_EXTS:
+                        text = path.read_text(encoding='utf-8', errors='ignore')
+                        imports, functions, classes, exports, doc_summary = extract_dita_info(text, ext)
+                    elif ext == SCSS_EXT:
+                        text = path.read_text(encoding='utf-8', errors='ignore')
+                        imports, functions, classes, exports, doc_summary = extract_scss_info(text)
+                    elif ext == CSS_EXT:
+                        text = path.read_text(encoding='utf-8', errors='ignore')
+                        imports, functions, classes, exports, doc_summary = extract_css_info(text)
+                    elif ext == XML_EXT:
+                        text = path.read_text(encoding='utf-8', errors='ignore')
+                        imports, functions, classes, exports, doc_summary = extract_xml_info(text)
                 if mtime is not None:
                     updated_cache[rel_key] = {
                         'mtime': mtime,
