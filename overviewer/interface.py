@@ -21,7 +21,8 @@ class OverviewerGUI:
         self.enrich_ext_vars = {}  # ext -> BooleanVar
         # Supported code/enrichment extensions (central reference)
         self.supported_enrich_exts = {'.py', '.ts', '.tsx', '.js', '.jsx', '.cs', '.java', '.sh', '.xsl', '.xml', '.dita', '.ditamap', '.scss', '.css'}
-        self.cache_var = tk.BooleanVar(value=True)
+        # Default cache disabled to avoid stale include states between fresh runs
+        self.cache_var = tk.BooleanVar(value=False)
         self.status_var = tk.StringVar(value='Idle')
         self.count_var = tk.StringVar(value='Files: 0 | Folders: 0')
         self.token_var = tk.StringVar(value='Tokens: 0')
@@ -77,6 +78,8 @@ class OverviewerGUI:
         chosen = filedialog.askdirectory()
         if chosen:
             self.project_path_var.set(chosen)
+            # Automatically trigger initial structure scan after selecting directory
+            self._scan_structure()
 
     def _scan_structure(self):
         import threading
@@ -98,8 +101,8 @@ class OverviewerGUI:
                 child.destroy()
             self.current_root = root_path.resolve()
 
-        # Load config only if starting fresh for this root
-        config = load_config(root_path) if not self.scanned_once else {}
+        # Load config only if starting fresh for this root AND user enabled cache
+        config = load_config(root_path) if (not self.scanned_once and self.cache_var.get()) else {}
 
         use_cache = self.cache_var.get()
         include_exts = None
@@ -131,7 +134,8 @@ class OverviewerGUI:
                 if not self.scanned_once:
                     for child in self.types_container.winfo_children():
                         child.destroy()
-                    supported_enrich_exts = {'.py', '.ts', '.tsx', '.js', '.jsx', '.cs', '.java', '.sh', '.xsl', '.xml', '.dita', '.ditamap', '.scss', '.css'}
+                    # Removed DITA (.dita, .ditamap) from enrichment-capable extensions per updated requirements
+                    supported_enrich_exts = {'.py', '.ts', '.tsx', '.js', '.jsx', '.cs', '.java', '.sh', '.xsl', '.xml', '.scss', '.css'}
                     for ext in sorted(all_exts):
                         include_var = tk.BooleanVar(value=True)
                         enrich_var = tk.BooleanVar(value=True) if ext in supported_enrich_exts else None
@@ -165,8 +169,9 @@ class OverviewerGUI:
                                 ext_text = chks[0].cget('text')
                                 if ext_text in ext_counts:
                                     lbl.config(text=f"{ext_counts[ext_text]} files")
-                # Persist include selections only
-                save_config(root_path, {'extensions': {e: v.get() for e, v in self.filetype_vars.items()}})
+                # Persist include selections only if cache enabled
+                if self.cache_var.get():
+                    save_config(root_path, {'extensions': {e: v.get() for e, v in self.filetype_vars.items()}})
                 md = render_markdown(tree, mode=self.mode_var.get())
                 def update_ui():
                     self.output_text.delete('1.0', tk.END)
@@ -198,16 +203,22 @@ class OverviewerGUI:
     def _deselect_all_types(self):
         for ext, var in self.filetype_vars.items():
             var.set(False)
-        # Do not immediately rescan to avoid losing extension visibility when zero selected.
+        if self.scanned_once:
+            # Rescan while keeping frames visible; empty selection should yield directory-only preview
+            self._scan_structure()
 
     def _select_all_types(self):
         for ext, var in self.filetype_vars.items():
             var.set(True)
+        if self.scanned_once:
+            self._scan_structure()
 
     def _select_supported_code_types(self):
         # Include only extensions we have enrichment logic for; others disabled
         for ext, var in self.filetype_vars.items():
             var.set(ext in self.supported_enrich_exts)
+        if self.scanned_once:
+            self._scan_structure()
 
     def _enrich(self):
         # Second phase: parse metadata for selected extensions & languages

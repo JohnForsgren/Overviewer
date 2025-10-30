@@ -25,6 +25,18 @@ def render_markdown(root: FolderNode, mode: str = MODE_DEVELOPER) -> str:
     """
     lines: List[str] = []
 
+    # Intro header block (suppressed in later processing; kept minimal)
+    # Emojis / Symbols:
+    # 📁 Folder heading (hierarchy levels with = adornment for top depths)
+    # 📄 Description placeholder line for each folder
+    # ⭐️ Star indicates a heuristically important file (entry points, scripts)
+    # 📕 Metadata lines (imports, functions, classes, exports, stats, doc)
+    # Rule: If a metadata category has zero items it is omitted entirely (no 'Functions:' when none).
+    # Stats line shows aggregate counts only when enrichment is active.
+    # AI Mode adds metadata; Developer Mode lists structure only.
+    lines.append("<!-- Overviewer Output: Structure & (optionally) Metadata. Zero-count sections omitted. -->")
+    lines.append("<!-- Legend: 📁 folder | 📄 description | ⭐️ important file | 📕 metadata -->")
+
     def heading_line(folder: FolderNode, depth: int) -> str:
         rel = folder.rel_path if folder.rel_path.endswith('/') else folder.rel_path + '/'
         if depth == 1:
@@ -59,11 +71,11 @@ def render_markdown(root: FolderNode, mode: str = MODE_DEVELOPER) -> str:
                 else:
                     if fi.imports:
                         lines.append(f"{mid}{SYMBOL_INFO} Imports: {', '.join(fi.imports[:25])}")
-                    if fi.functions:
+                    if fi.functions:  # zero-suppressed
                         lines.append(f"{mid}{SYMBOL_INFO} Functions: {', '.join(fi.functions[:25])}")
-                    if fi.classes:
+                    if fi.classes:  # zero-suppressed
                         lines.append(f"{mid}{SYMBOL_INFO} Classes: {', '.join(fi.classes[:10])}")
-                    if fi.exports:
+                    if fi.exports:  # zero-suppressed
                         lines.append(f"{mid}{SYMBOL_INFO} Exports: {', '.join(fi.exports[:10])}")
                     if fi.line_count:
                         lines.append(f"{mid}{SYMBOL_INFO} Stats: LOC {fi.line_count} | funcs {len(fi.functions)} | classes {len(fi.classes)} | exports {len(fi.exports)}")

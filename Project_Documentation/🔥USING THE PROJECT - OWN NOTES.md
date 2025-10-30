@@ -9,6 +9,13 @@ The four main steps
 ## 1. Setting up the initial documentation
 * The app is started, you select the targeted root folder, and generate the initial overview file - deselecting file types thare are not interesting. 
 
+* Unimportant files for the respective repos: 
+
+    * SPA: 
+        * .jar files -> Contains no readable code
+        * .svg files -> Skip
+    * 
+
 ## 2. The "Smart context" is added (Based on the completed file in step 1) 
 * The current app functionality for this should essentially be fully complete at this point. 
 
@@ -16,8 +23,15 @@ The four main steps
 ### 3.1 Human Addon
 
 <<<<<<<<<<<< CONTINUE HERE:  🔥🔥🔥🔥🔥🔥🔥🔥🔥 
-Since i already have existing comments on the current project -> Set up the initial document from step 2 and integrate my own comments. 
+* Since i already have existing comments on the current project -> Set up the initial document from step 2 and integrate my own comments. 
 
+* ALSO NOTE: Remove unecessary folders before adding own documentation. 
+
+* ALSO TODO: Add a comment at the top of the document, explaining the document purpose (see below)  
+
+DOCUMENT PURPOSE: 
+- The prupose of this document is to give an AI (E.g Copilot) a clear overview of the current repository, without having to send in every file into the model directly. 
+- The AI model is encouraged to use this document during development, so that for instance (1) There is an understanding of existing features so that new features are not "reinventing the wheel" [implementing already existing features] or placing the code at the wrong place. 
 
 ### 3.2 AI Addon
 Here, the idea is that an AI is prompted to manually go into certain files and add relevant content to them. 

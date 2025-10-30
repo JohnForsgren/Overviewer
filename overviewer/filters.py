@@ -17,9 +17,15 @@ SOURCE_EXTS: Set[str] = {
 }
 
 # Extensions typically not useful for overview (treated as binary/assets) - skipped for metadata parsing
+# Binary/asset extensions: skipped for metadata parsing (but may still appear structurally unless excluded separately)
 BINARY_EXTS: Set[str] = {
-    '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.zip', '.jar', '.exe', '.dll', '.so', '.pdf', '.mp4', '.mp3', '.wav',
-    '.ttf', '.otf', '.woff', '.woff2'
+    '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.zip', '.jar', '.so', '.mp4', '.mp3', '.wav',
+    '.ttf', '.otf', '.woff', '.woff2', '.dtd', '.ent', '.mod'
+}
+
+# Structural exclusion: do not list these files at all (suppressed in overview)
+EXCLUDED_STRUCTURE_EXTS: Set[str] = {
+    '.png', '.svg', '.jar', '.dtd', '.ent', '.mod'
 }
 
 TEXTLIKE_EXTS: Set[str] = {
@@ -40,4 +46,7 @@ def should_ignore_file(path: Path) -> bool:
 
 def is_binary_ext(ext: str) -> bool:
     return ext.lower() in BINARY_EXTS
+
+def is_excluded_structure_ext(ext: str) -> bool:
+    return ext.lower() in EXCLUDED_STRUCTURE_EXTS
 

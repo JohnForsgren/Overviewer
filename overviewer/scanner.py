@@ -5,7 +5,7 @@ import os
 import ast
 
 from .model import FolderNode, FileInfo
-from .filters import should_ignore_dir, should_ignore_file, AUTO_STAR_FILENAMES, is_binary_ext
+from .filters import should_ignore_dir, should_ignore_file, AUTO_STAR_FILENAMES, is_binary_ext, is_excluded_structure_ext
 from .cache import load_cache, save_cache
 
 PYTHON_EXTS = {'.py'}
@@ -16,6 +16,7 @@ JAVA_EXT = '.java'
 SHELL_EXT = '.sh'
 XSL_EXT = '.xsl'
 XML_EXT = '.xml'
+# DITA support disabled (no enrichment / parsing) per requirement; keep constant for potential future restore
 DITA_EXTS = {'.dita', '.ditamap'}
 SCSS_EXT = '.scss'
 CSS_EXT = '.css'
@@ -315,7 +316,14 @@ def scan_project(root: Path, include_exts=None, use_cache: bool = False, parse_m
             if should_ignore_file(path):
                 continue
             ext = path.suffix.lower()
-            if include_exts and ext not in include_exts:
+            # If include_exts was provided but is empty, skip all files (user deselected all types)
+            if include_exts is not None:
+                if len(include_exts) == 0:
+                    continue
+                if ext not in include_exts:
+                    continue
+            # Structural exclusion check
+            if is_excluded_structure_ext(ext):
                 continue
             rel = path.relative_to(root)
             starred = filename in AUTO_STAR_FILENAMES
@@ -375,9 +383,9 @@ def scan_project(root: Path, include_exts=None, use_cache: bool = False, parse_m
                     elif ext == XSL_EXT:
                         text = path.read_text(encoding='utf-8', errors='ignore')
                         imports, functions, classes, exports, doc_summary = extract_xsl_info(text)
+                    # DITA parsing disabled intentionally; treat as simple text files (no metadata)
                     elif ext in DITA_EXTS:
-                        text = path.read_text(encoding='utf-8', errors='ignore')
-                        imports, functions, classes, exports, doc_summary = extract_dita_info(text, ext)
+                        pass  # skip metadata extraction for .dita / .ditamap
                     elif ext == SCSS_EXT:
                         text = path.read_text(encoding='utf-8', errors='ignore')
                         imports, functions, classes, exports, doc_summary = extract_scss_info(text)
