@@ -78,7 +78,14 @@ def render_markdown(root: FolderNode, mode: str = MODE_DEVELOPER) -> str:
                     if fi.exports:  # zero-suppressed
                         lines.append(f"{mid}{SYMBOL_INFO} Exports: {', '.join(fi.exports[:10])}")
                     if fi.line_count:
-                        lines.append(f"{mid}{SYMBOL_INFO} Stats: LOC {fi.line_count} | funcs {len(fi.functions)} | classes {len(fi.classes)} | exports {len(fi.exports)}")
+                        stats_parts = [f"LOC {fi.line_count}"]
+                        if fi.functions:
+                            stats_parts.append(f"funcs {len(fi.functions)}")
+                        if fi.classes:
+                            stats_parts.append(f"classes {len(fi.classes)}")
+                        if fi.exports:
+                            stats_parts.append(f"exports {len(fi.exports)}")
+                        lines.append(f"{mid}{SYMBOL_INFO} Stats: " + " | ".join(stats_parts))
                     if fi.doc_summary:
                         lines.append(f"{mid}{SYMBOL_INFO} Doc: {fi.doc_summary}")
         for sub in sorted(folder.subfolders.values(), key=lambda s: s.name.lower()):
