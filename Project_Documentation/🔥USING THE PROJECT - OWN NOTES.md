@@ -4,10 +4,7 @@ Do this by using the command:
 
 
 # PROJECT PURPOSE / SUMMARY 
-(This is a brief summary; i don't want to be to long here since this sort of thing is likely already written in more detail elsewhere, but i cant find it atm)
-The overall vision with the project is to create one or a few files which give a clear project overview; it can target either a human user or AI. 
-
-It is used t
+Written in a separate file 
 
 
 # How the project is used
