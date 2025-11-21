@@ -16,9 +16,9 @@ SYMBOL_BRAIN = '🧠'
 
 
 def render_markdown(root: FolderNode, mode: str = MODE_DEVELOPER) -> str:
-    """Render markdown with hash symbols removed from folder headings:
-    Depth 1: ======= 📁 path/ =======
-    Depth 2: === 📁 path/ ===
+    """Render markdown folder headings (depth 1 & 2 now prefixed with '# ' for collapsible sections):
+    Depth 1: # ======= 📁 path/ =======
+    Depth 2: # === 📁 path/ ===
     Depth 3: 📁 path/
     Depth >=4: (depth-3)*4 spaces + 📁 path/
     Files: star at start if starred.
@@ -35,14 +35,14 @@ def render_markdown(root: FolderNode, mode: str = MODE_DEVELOPER) -> str:
     # Stats line shows aggregate counts only when enrichment is active.
     # AI Mode adds metadata; Developer Mode lists structure only.
     lines.append("<!-- Overviewer Output: Structure & (optionally) Metadata. Zero-count sections omitted. -->")
-    lines.append("<!-- Legend: 📁 folder | 📄 description | ⭐️ important file | 📕 metadata -->")
+    lines.append("<!-- Legend: 📁 folder | 📄 description | ⭐️ important file | 📕 metadata | 🤖 AI comment | 🧠 human comment -->")
 
     def heading_line(folder: FolderNode, depth: int) -> str:
         rel = folder.rel_path if folder.rel_path.endswith('/') else folder.rel_path + '/'
         if depth == 1:
-            return f"{'='*7} {SYMBOL_FOLDER} {rel} {'='*7}"
+            return f"# {'='*7} {SYMBOL_FOLDER} {rel} {'='*7}"
         if depth == 2:
-            return f"{'='*3} {SYMBOL_FOLDER} {rel} {'='*3}"
+            return f"# {'='*3} {SYMBOL_FOLDER} {rel} {'='*3}"
         if depth == 3:
             return f"{SYMBOL_FOLDER} {rel}"
         indent = ' ' * ((depth - 3) * 4)

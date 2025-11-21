@@ -1,20 +1,21 @@
+# Running the project
+Do this by using the command: 
+./.venv/Scripts/python.exe -m overviewer gui
 
 
+# PROJECT PURPOSE / SUMMARY 
+(This is a brief summary; i don't want to be to long here since this sort of thing is likely already written in more detail elsewhere, but i cant find it atm)
+The overall vision with the project is to create one or a few files which give a clear project overview; it can target either a human user or AI. 
+
+It is used t
+
+
+# How the project is used
 
 This file is a personal file where i describe my thoughts around the project. The project itself is clearly documented in the other files (readme, Project DOcumentation & Original_Instructions)
 
-The four main steps 
-
-
 ## 1. Setting up the initial documentation
 * The app is started, you select the targeted root folder, and generate the initial overview file - deselecting file types thare are not interesting. 
-
-* Unimportant files for the respective repos: 
-
-    * SPA: 
-        * .jar files -> Contains no readable code
-        * .svg files -> Skip
-    * 
 
 ## 2. The "Smart context" is added (Based on the completed file in step 1) 
 * The current app functionality for this should essentially be fully complete at this point. 
@@ -23,15 +24,22 @@ The four main steps
 ### 3.1 Human Addon
 
 <<<<<<<<<<<< CONTINUE HERE:  🔥🔥🔥🔥🔥🔥🔥🔥🔥 
-* Since i already have existing comments on the current project -> Set up the initial document from step 2 and integrate my own comments. 
+<<<<<<<< FORTSÄTT MED: Fyll på dokumentations-dokumentet med NUVARANDE ANTECKNINGAR i : 
+    * (R) ALSO NOTE: Remove unecessary folders before adding own documentation. 
+	* Pdf refactoring (Respektive SPA)
+	* Main-dokumentet "Dokumentation Kodbasen)
 
-* ALSO NOTE: Remove unecessary folders before adding own documentation. 
+	* Fortsätt därefter med nedanstående steg i todo-listan 
+
+
 
 * ALSO TODO: Add a comment at the top of the document, explaining the document purpose (see below)  
 
 DOCUMENT PURPOSE: 
 - The prupose of this document is to give an AI (E.g Copilot) a clear overview of the current repository, without having to send in every file into the model directly. 
-- The AI model is encouraged to use this document during development, so that for instance (1) There is an understanding of existing features so that new features are not "reinventing the wheel" [implementing already existing features] or placing the code at the wrong place. 
+- The AI model is encouraged to use this document during development, so that for instance: 
+(1) There is an understanding of existing features so that new features are not "reinventing the wheel" [implementing already existing features] or placing the code at the wrong place. 
+(2) Consider leaving comments in the file (Marked with the Robot 🤖 if there are any interesting considerations that is worth keeping in mind for future reference. These should be short and consise)
 
 ### 3.2 AI Addon
 Here, the idea is that an AI is prompted to manually go into certain files and add relevant content to them. 
