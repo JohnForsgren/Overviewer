@@ -312,10 +312,12 @@ class OverviewerGUI:
             stripped = line.strip()
             if not stripped:
                 continue
-            # Skip folder headings & description lines
-            if '📁' in stripped or stripped.startswith(('=', '#')) or stripped.startswith('📄'):
+            # Skip folder headings
+            if '📁' in stripped or stripped.startswith(('=', '#')):
                 continue
             display = stripped
+            if display.startswith('◇'):
+                display = display[1:].strip()
             if display.startswith('⭐️ '):
                 display = display[3:]
             # The filename is the last token (after indentation & star)

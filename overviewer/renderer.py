@@ -8,7 +8,7 @@ MODE_DEVELOPER = 'developer'
 MODE_AI = 'ai'
 
 SYMBOL_FOLDER = '📁'
-SYMBOL_DESC = '📄'
+SYMBOL_FILE = '◇'
 SYMBOL_STAR = '⭐️'
 SYMBOL_INFO = '📕'
 SYMBOL_AI = '🤖'
@@ -25,17 +25,22 @@ def render_markdown(root: FolderNode, mode: str = MODE_DEVELOPER) -> str:
     """
     lines: List[str] = []
 
-    # Intro header block (suppressed in later processing; kept minimal)
-    # Emojis / Symbols:
-    # 📁 Folder heading (hierarchy levels with = adornment for top depths)
-    # 📄 Description placeholder line for each folder
-    # ⭐️ Star indicates a heuristically important file (entry points, scripts)
-    # 📕 Metadata lines (imports, functions, classes, exports, stats, doc)
-    # Rule: If a metadata category has zero items it is omitted entirely (no 'Functions:' when none).
-    # Stats line shows aggregate counts only when enrichment is active.
-    # AI Mode adds metadata; Developer Mode lists structure only.
-    lines.append("<!-- Overviewer Output: Structure & (optionally) Metadata. Zero-count sections omitted. -->")
-    lines.append("<!-- Legend: 📁 folder | 📄 description | ⭐️ important file | 📕 metadata | 🤖 AI comment | 🧠 human comment -->")
+    # Intro header block reflecting the user's preferred legend + guidance
+    lines.append("# Legend")
+    lines.append("- 📁 Folder heading. Add inline summary like `📁 src/ 🧠 Frontend entry + shared state` when relevant.")
+    lines.append("- ◇ File entry bullet. Stars (⭐️ / ⭐⭐ / ⭐⭐⭐) follow right after when a file truly matters.")
+    lines.append("- 🤖 AI-authored note. Always tag AI-generated explanations so humans know what needs double-checking.")
+    lines.append("- 🧠 Human-authored note. Typically short reminders or context not obvious from the filename.")
+    lines.append("- ❗ Issue to address. Track must-fix problems here.")
+    lines.append("- ⚠️ Warning / risky workaround that should be reconsidered soon.")
+    lines.append("- 💥 Question / open decision that needs an answer.")
+    lines.append("")
+    lines.append("# Guidelines on keeping this up to date:")
+    lines.append("> WHAT *SHOULD* BE DONE: When developing, keep the document up to date in case files are changed or removed. Also if outdated or incorrect info is encountered, change this.")
+    lines.append("> WHAT *SHOULD NOT* BE DONE: Adding long verbose comments. Recall that AI agents can read the content of individual files, so the overview should just briefly summarize them. Notably:")
+    lines.append("    - Not all files need a description; many files can be understood what they do based on ther name and the folder they are placed in.")
+    lines.append("    - Not much comment is needed beyond a brief description of the file, unless there is some important aspect to consider, e.g if a less than ideal solution has been implemented that should be adressed later, or if a necessary \"workaround\" or similar is created which is infeasible to change, this might be listed as a warning.")
+    lines.append("")
 
     def heading_line(folder: FolderNode, depth: int) -> str:
         rel = folder.rel_path if folder.rel_path.endswith('/') else folder.rel_path + '/'
@@ -58,12 +63,12 @@ def render_markdown(root: FolderNode, mode: str = MODE_DEVELOPER) -> str:
 
     def walk(folder: FolderNode, depth: int = 1):
         lines.append(heading_line(folder, depth))
-        desc_indent = file_indent(depth)
-        lines.append(f"{desc_indent}{SYMBOL_DESC} Description:")
         indent = file_indent(depth)
         for fi in sorted(folder.files, key=lambda f: f.name.lower()):
             prefix = f"{SYMBOL_STAR} " if fi.starred else ''
-            lines.append(f"{indent}{prefix}{fi.name}")
+            line = f"{indent}{SYMBOL_FILE} "
+            line += f"{prefix}{fi.name}" if prefix else fi.name
+            lines.append(line)
             if mode == MODE_AI and fi.enriched:
                 mid = meta_indent(depth)
                 if fi.skipped:

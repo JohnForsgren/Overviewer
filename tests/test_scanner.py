@@ -10,7 +10,7 @@ def test_scan_python_and_ts():
     md_dev = render_markdown(tree, mode=MODE_DEVELOPER)
     md_ai = render_markdown(tree, mode=MODE_AI)
     # Basic assertions
-    assert 'sample.py' in md_dev
+    assert '◇ sample.py' in md_dev
     assert 'App.tsx' in md_ai
     # AI mode should include info lines
     assert 'Imports:' in md_ai
@@ -20,7 +20,7 @@ def test_scan_python_and_ts():
 def test_auto_star():
     tree = scan_project(DATA_DIR, include_exts=['.tsx'])
     md = render_markdown(tree, mode=MODE_DEVELOPER)
-    assert '⭐️ App.tsx' in md
+    assert '◇ ⭐️ App.tsx' in md
 
 
 def test_headings_present():
@@ -30,3 +30,4 @@ def test_headings_present():
     assert '======= 📁' in md
     # No raw hash heading markers should appear now
     assert '# 📁' not in md and '## 📁' not in md and '### ' not in md
+    assert '📄 Description' not in md
