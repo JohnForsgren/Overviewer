@@ -23,22 +23,31 @@ TARGET AI:
 - The AI can use the document at the start of a chat to quickly become up-to-date on the projhect, without having to manually read a bunch of files. It also reduces the likelyhood that the AI implements soltuions that already exists, or solutions in the wrong places. 
 - A general idea I have been trying to implement in the project is that an AI should be able to write scripts that go into individual files, check them for general useful content such as imported libraries and function names, and report them as general "metadata" in a large-file (marked by the symbol "📕"). This would enable the AI to quickly have an understanding of the project structure. This has been done in the Overviewer project, but the same structure can also be used without the overviewer script, by the AI simply generating the files. 
 
-# Legend 
+GENERAL GUIDES for how the AI should manage these documents: 
+- A thing to AVOID in this regard (For an AI who is supporting the project): Do not add a bunch of long comments (especially not unless the user has asked for it) to the file. Potentially, there could be two DIFFERENT overview-files of the project where there is a separate one that is dedicated for an AI, where it is possible to be more verbose, since human-readibility isn't critical.
+
+> WHAT *SHOULD* BE DONE: When developing, keep the document up to date in case files are changed or removed. Also if outdated or incorrect info is encountered, change this. 
+> WHAT *SHOULD NOT* BE DONE: Adding long verbose comments. Recall that AI agents can read the content of individual files, so the overview should just briefly summarize them, Notably: 
+    - Not all files need a description; many files can be understood what they do based on ther name and the folder they are placed in. 
+    - Not much comment is needed beyond a brief description of the file, unless there is some important aspect to consider, e.g if a less than ideal solution has been implemented that should be adressed later, or if a necessary "workaround" or similar is created which is infeasible to change, this might be listed as a warning. 
+
+These reminders apply directly to this summary file as well: keep entries minimal when the filename already explains itself, and only expand when you truly need to flag a workaround, warning, or decision.
+    - Notably, as has been achieved by the Overviewer app, many files are not listed at all. It is just the files that relate to development that are important. Especially Libraries (e.g venv installations, __pycache__ etc ) are completely irrelevant. Many other files can potentially also be irelevant. For details on this: see the Overviewer project file "filters.py"  
+
+
+## Emoji legend (source of truth)
+Use these consistently so both humans and AI immediately understand each entry. Folder descriptions should now be placed inline on the folder heading itself (with 🧠/🤖) instead of on a separate `📄 Description` line.
+
 - 📁 Folder heading. Add inline summary like `📁 src/ 🧠 Frontend entry + shared state` when relevant.
-- ◇ File entry bullet. Stars (⭐️ / ⭐⭐ / ⭐⭐⭐) follow right after when a file truly matters.
+- ◇ File entry bullet. Stars (⭐️ / ⭐⭐ / ⭐⭐⭐) follow the bullet immediately when a file truly matters.
+- 📕 Overviewer metadata. Only the script emits these lines (imports, functions, LOC, skips, etc.).
 - 🤖 AI-authored note. Always tag AI-generated explanations so humans know what needs double-checking.
 - 🧠 Human-authored note. Typically short reminders or context not obvious from the filename.
 - ❗ Issue to address. Track must-fix problems here.
 - ⚠️ Warning / risky workaround that should be reconsidered soon.
 - 💥 Question / open decision that needs an answer.
 
-# Guidelines on keeping this up to date: 
-> WHAT *SHOULD* BE DONE: When developing, keep the document up to date in case files are changed or removed. Also if outdated or incorrect info is encountered, change this. 
-> WHAT *SHOULD NOT* BE DONE: Adding long verbose comments. Recall that AI agents can read the content of individual files, so the overview should just briefly summarize them, Notably: 
-    - Not all files need a description; many files can be understood what they do based on ther name and the folder they are placed in. 
-    - Not much comment is needed beyond a brief description of the file, unless there is some important aspect to consider, e.g if a less than ideal solution has been implemented that should be adressed later, or if a necessary "workaround" or similar is created which is infeasible to change, this might be listed as a warning. 
-
-    - Notably, as has been achieved by the Overviewer app, many files are not listed at all. It is just the files that relate to development that are important. Especially Libraries (e.g venv installations, __pycache__ etc ) are completely irrelevant. Many other files can potentially also be irelevant. For details on this: see the Overviewer project file "filters.py"  
+> Remember: keep comments short and purposeful. Many files need no comment at all if the name + folder already explain the intent.
 
 ## Headings / Levels. 
 The headings are made in this particular way to creat clear readibility. 
