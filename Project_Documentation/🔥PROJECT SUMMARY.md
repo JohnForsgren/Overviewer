@@ -43,8 +43,8 @@ Use these consistently so both humans and AI immediately understand each entry. 
 - 📕 Overviewer metadata. Only the script emits these lines (imports, functions, LOC, skips, etc.).
 - 🤖 AI-authored note. Always tag AI-generated explanations so humans know what needs double-checking.
 - 🧠 Human-authored note. Typically short reminders or context not obvious from the filename.
-- ❗ Issue to address. Track must-fix problems here.
-- ⚠️ Warning / risky workaround that should be reconsidered soon.
+- ❗ Issue to address. 
+- ⚠️ Warning
 - 💥 Question / open decision that needs an answer.
 
 > Remember: keep comments short and purposeful. Many files need no comment at all if the name + folder already explain the intent.

@@ -28,20 +28,16 @@ def render_markdown(root: FolderNode, mode: str = MODE_DEVELOPER) -> str:
     # Intro header block reflecting the user's preferred legend + guidance
     lines.append("# Legend")
     lines.append("- 📁 Folder heading. Add inline summary like `📁 src/ 🧠 Frontend entry + shared state` when relevant.")
-    lines.append("- ◇ File entry bullet. Stars (⭐️ / ⭐⭐ / ⭐⭐⭐) follow right after when a file truly matters.")
+    lines.append("- ◇ File entry bullet. Stars (⭐️ / ⭐⭐ / ⭐⭐⭐) follow the bullet immediately when a file truly matters.")
+    lines.append("- 📕 Overviewer metadata. Only the script emits these lines (imports, functions, LOC, skips, etc.).")
     lines.append("- 🤖 AI-authored note. Always tag AI-generated explanations so humans know what needs double-checking.")
     lines.append("- 🧠 Human-authored note. Typically short reminders or context not obvious from the filename.")
     lines.append("- ❗ Issue to address. Track must-fix problems here.")
     lines.append("- ⚠️ Warning / risky workaround that should be reconsidered soon.")
     lines.append("- 💥 Question / open decision that needs an answer.")
+    lines.append("> Remember: keep comments short and purposeful. Many files need no comment at all if the name + folder already explain the intent.")
     lines.append("")
-    lines.append("# Guidelines on keeping this up to date:")
-    lines.append("> WHAT *SHOULD* BE DONE: When developing, keep the document up to date in case files are changed or removed. Also if outdated or incorrect info is encountered, change this.")
-    lines.append("> WHAT *SHOULD NOT* BE DONE: Adding long verbose comments. Recall that AI agents can read the content of individual files, so the overview should just briefly summarize them. Notably:")
-    lines.append("    - Not all files need a description; many files can be understood what they do based on ther name and the folder they are placed in.")
-    lines.append("    - Not much comment is needed beyond a brief description of the file, unless there is some important aspect to consider, e.g if a less than ideal solution has been implemented that should be adressed later, or if a necessary \"workaround\" or similar is created which is infeasible to change, this might be listed as a warning.")
-    lines.append("")
-
+    
     def heading_line(folder: FolderNode, depth: int) -> str:
         rel = folder.rel_path if folder.rel_path.endswith('/') else folder.rel_path + '/'
         if depth == 1:
