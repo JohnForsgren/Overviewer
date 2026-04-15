@@ -27,13 +27,13 @@ def render_markdown(root: FolderNode, mode: str = MODE_DEVELOPER) -> str:
 
     # Intro header block reflecting the user's preferred legend + guidance
     lines.append("# Legend")
-    lines.append("- 📁 Folder heading. Add inline summary like `📁 src/ 🧠 Frontend entry + shared state` when relevant.")
-    lines.append("- ◇ File entry bullet. Stars (⭐️ / ⭐⭐ / ⭐⭐⭐) follow the bullet immediately when a file truly matters.")
-    lines.append("- 📕 Overviewer metadata. Only the script emits these lines (imports, functions, LOC, skips, etc.).")
+    lines.append("- 📁 Folder heading. Add inline summary like `📁 src/ 🤖 Frontend entry + shared state` when relevant.")
+    lines.append("- ◇ File entry bullet.")
+    lines.append("- ⭐️ Stars (⭐️ / ⭐⭐ / ⭐⭐⭐) indicates important files.")
     lines.append("- 🤖 AI-authored note. Always tag AI-generated explanations so humans know what needs double-checking.")
-    lines.append("- 🧠 Human-authored note. Typically short reminders or context not obvious from the filename.")
+    lines.append("- 🧠 Human-authored note (typically important notes).")
     lines.append("- ❗ Issue to address. Track must-fix problems here.")
-    lines.append("- ⚠️ Warning / risky workaround that should be reconsidered soon.")
+    lines.append("- ⚠️ Warning")
     lines.append("- 💥 Question / open decision that needs an answer.")
     lines.append("> Remember: keep comments short and purposeful. Many files need no comment at all if the name + folder already explain the intent.")
     lines.append("")
